@@ -169,7 +169,56 @@ if not st.session_state.quiz_active and not st.session_state.submitted:
 # Sınav Ekranı
 if st.session_state.quiz_active and not st.session_state.submitted:
     
-    st.info("Sınav başladı! Tüm soruları yanıtladıktan sonra en alttaki butona basarak sınavı bitirebilirsin.")
+    # Kalan saniyeyi hesaplayıp JavaScript'e gönderiyoruz
+    time_elapsed = time.time() - st.session_state.start_time
+    time_left_seconds = int(45 * 60 - time_elapsed)
+    if time_left_seconds < 0:
+        time_left_seconds = 0
+
+    # CANLI SAYAÇ HTML/JS KODU
+    timer_html = f"""
+    <div style="
+        position: fixed; 
+        top: 20px; 
+        right: 20px; 
+        background: #ffffff; 
+        padding: 10px 20px; 
+        border-radius: 8px; 
+        box-shadow: 0px 4px 10px rgba(0,0,0,0.1); 
+        border: 2px solid #ff4b4b; 
+        color: #ff4b4b; 
+        font-weight: bold; 
+        font-size: 1.2rem; 
+        z-index: 99999;">
+        ⏳ Kalan Süre: <span id="countdown_timer">Hesaplanıyor...</span>
+    </div>
+
+    <script>
+        var timeLeft = {time_left_seconds};
+        var elem = window.parent.document.getElementById('countdown_timer');
+        if (!elem) elem = document.getElementById('countdown_timer'); // Yedek plan
+        
+        // Önceki sayaç varsa temizle (Streamlit yeniden yüklemeleri için)
+        if (window.countdownInterval) clearInterval(window.countdownInterval);
+        
+        window.countdownInterval = setInterval(function() {{
+            if (timeLeft <= 0) {{
+                clearInterval(window.countdownInterval);
+                if(elem) elem.innerHTML = "00:00 - Süre Bitti!";
+            }} else {{
+                var m = Math.floor(timeLeft / 60);
+                var s = timeLeft % 60;
+                if(elem) elem.innerHTML = (m < 10 ? "0" + m : m) + ":" + (s < 10 ? "0" + s : s);
+                timeLeft--;
+            }}
+        }}, 1000);
+    </script>
+    """
+    
+    # HTML'i sayfaya enjekte et (yukarıda sabit kalacak)
+    st.markdown(timer_html, unsafe_allow_html=True)
+    
+    st.info("Sınav başladı! Kalan süreni ekranın sağ üst köşesinden canlı olarak takip edebilirsin.")
     
     with st.form("quiz_form"):
         user_answers = []
@@ -201,8 +250,8 @@ if st.session_state.submitted:
     with col2:
         st.metric(label="Harcanan Süre", value=f"{st.session_state.elapsed_minutes} Dakika")
         
-    if st.session_state.elapsed_minutes > 45:
-        st.warning("Hedeflenen 45 dakikalık süreyi aştınız.")
+    if st.session_state.elapsed_minutes >= 45:
+        st.error("Hedeflenen 45 dakikalık süreyi aştınız.")
     else:
         st.balloons()
         
