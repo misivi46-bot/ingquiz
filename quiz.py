@@ -175,25 +175,28 @@ if st.session_state.quiz_active and not st.session_state.submitted:
     if time_left_seconds < 0:
         time_left_seconds = 0
 
-    # CANLI SAYAÇ HTML/JS KODU (Ortalanmış)
+    # CANLI SAYAÇ HTML/JS KODU (Sağ Orta Kenar)
     timer_html = f"""
     <div style="
         position: fixed; 
-        top: 20px; 
-        left: 50%; 
-        transform: translateX(-50%);
+        top: 50%; 
+        right: 20px; 
+        transform: translateY(-50%);
         background: #ffffff; 
-        padding: 10px 25px; 
-        border-radius: 8px; 
-        box-shadow: 0px 4px 12px rgba(0,0,0,0.15); 
+        padding: 15px; 
+        border-radius: 10px; 
+        box-shadow: 0px 4px 15px rgba(0,0,0,0.2); 
         border: 2px solid #ff4b4b; 
         color: #ff4b4b; 
         font-weight: bold; 
-        font-size: 1.2rem; 
+        font-size: 1.1rem; 
         z-index: 99999;
         text-align: center;
-        white-space: nowrap;">
-        ⏳ Kalan Süre: <span id="countdown_timer">Hesaplanıyor...</span>
+        display: flex;
+        flex-direction: column;
+        gap: 5px;">
+        <span>⏳ Kalan Süre</span>
+        <span id="countdown_timer" style="font-size: 1.4rem;">Hesaplanıyor...</span>
     </div>
 
     <script>
@@ -218,10 +221,10 @@ if st.session_state.quiz_active and not st.session_state.submitted:
     </script>
     """
     
-    # HTML'i sayfaya enjekte et (yukarıda sabit ve ortalanmış kalacak)
+    # HTML'i sayfaya enjekte et
     st.markdown(timer_html, unsafe_allow_html=True)
     
-    st.info("Sınav başladı! Kalan süreni ekranın en üstünde görebilirsin.")
+    st.info("Sınav başladı! Kalan süreni ekranın sağ orta kenarından takip edebilirsin.")
     
     with st.form("quiz_form"):
         user_answers = []
