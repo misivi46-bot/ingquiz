@@ -5,7 +5,7 @@ import time
 # Sayfa Ayarları
 st.set_page_config(page_title="İngilizce Kelime Sınavı", layout="centered")
 
-# Kelime Havuzu
+# Kelime Havuzu (Fotoğraflardan çıkarılan tüm kelimeler)
 word_pool = [
     {"en": "On time", "tr": "Zamanında"}, {"en": "Calm", "tr": "Sakin, serin"}, {"en": "Teach", "tr": "Öğretmek"},
     {"en": "Pen Pal", "tr": "Mektup arkadaşı"}, {"en": "Messy", "tr": "Kirli"}, {"en": "Believe", "tr": "İnanmak"},
@@ -169,13 +169,15 @@ if not st.session_state.quiz_active and not st.session_state.submitted:
 # Sınav Ekranı
 if st.session_state.quiz_active and not st.session_state.submitted:
     
-    # Kalan saniyeyi hesaplayıp JavaScript'e gönderiyoruz
+    # Başlangıçtan itibaren ne kadar süre geçtiğini hesaplıyoruz
     time_elapsed = time.time() - st.session_state.start_time
-    time_left_seconds = int(45 * 60 - time_elapsed)
+    # 45 dakikadan (2700 saniye) geçen süreyi çıkararak kalanı buluyoruz
+    time_left_seconds = int((45 * 60) - time_elapsed)
+    
     if time_left_seconds < 0:
         time_left_seconds = 0
 
-    # CANLI SAYAÇ HTML/JS KODU (Sağ Orta Kenar)
+    # CANLI SAYAÇ HTML/JS KODU (Sağ Orta Kenar - 45'ten Geri Sayım)
     timer_html = f"""
     <div style="
         position: fixed; 
@@ -196,15 +198,15 @@ if st.session_state.quiz_active and not st.session_state.submitted:
         flex-direction: column;
         gap: 5px;">
         <span>⏳ Kalan Süre</span>
-        <span id="countdown_timer" style="font-size: 1.4rem;">Hesaplanıyor...</span>
+        <span id="countdown_timer" style="font-size: 1.4rem;">45:00</span>
     </div>
 
     <script>
+        // Python'dan gelen geriye kalan saniyeyi değişkene atıyoruz
         var timeLeft = {time_left_seconds};
         var elem = window.parent.document.getElementById('countdown_timer');
-        if (!elem) elem = document.getElementById('countdown_timer'); // Yedek plan
+        if (!elem) elem = document.getElementById('countdown_timer'); 
         
-        // Önceki sayaç varsa temizle (Streamlit yeniden yüklemeleri için)
         if (window.countdownInterval) clearInterval(window.countdownInterval);
         
         window.countdownInterval = setInterval(function() {{
@@ -212,9 +214,12 @@ if st.session_state.quiz_active and not st.session_state.submitted:
                 clearInterval(window.countdownInterval);
                 if(elem) elem.innerHTML = "00:00 - Süre Bitti!";
             }} else {{
+                // Kalan süreyi dakika ve saniye formatına çevir
                 var m = Math.floor(timeLeft / 60);
                 var s = timeLeft % 60;
+                // Ekrana formatlı şekilde yazdır (Örn: 44:59, 44:58...)
                 if(elem) elem.innerHTML = (m < 10 ? "0" + m : m) + ":" + (s < 10 ? "0" + s : s);
+                // Saniyeyi bir eksilt
                 timeLeft--;
             }}
         }}, 1000);
@@ -224,7 +229,7 @@ if st.session_state.quiz_active and not st.session_state.submitted:
     # HTML'i sayfaya enjekte et
     st.markdown(timer_html, unsafe_allow_html=True)
     
-    st.info("Sınav başladı! Kalan süreni ekranın sağ orta kenarından takip edebilirsin.")
+    st.info("Sınav başladı! Kalan süreni ekranın sağ orta kenarından 45 dakikadan geriye doğru takip edebilirsin.")
     
     with st.form("quiz_form"):
         user_answers = []
