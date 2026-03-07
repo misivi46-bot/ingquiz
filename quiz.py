@@ -141,10 +141,9 @@ if 'quiz_active' not in st.session_state:
     st.session_state.blank_count = 0
     
     st.session_state.words_to_repeat = []
-    st.session_state.mistakes_details = [] # Yeni eklenen: Yanlış yapılan soruların detayları
+    st.session_state.mistakes_details = []
 
 def start_new_quiz():
-    # Önceki sınavdan kalan tekrar edilecek kelimeleri al
     priority_words = st.session_state.words_to_repeat
     num_needed = max(0, 90 - len(priority_words))
     
@@ -174,7 +173,6 @@ def start_new_quiz():
     st.session_state.quiz_active = True
     st.session_state.submitted = False
     
-    # Yeni sınav başlarken istatistikleri sıfırla
     st.session_state.score = 0
     st.session_state.correct_count = 0
     st.session_state.wrong_count = 0
@@ -183,6 +181,51 @@ def start_new_quiz():
     st.session_state.mistakes_details = [] 
     
     st.session_state.start_time = time.time()
+
+# SINAVI BİTİRME VE RAPOR HESAPLAMA MOTORU
+def finish_quiz():
+    elapsed_time = time.time() - st.session_state.start_time
+    st.session_state.elapsed_minutes = int(elapsed_time // 60)
+    
+    c_count = 0
+    w_count = 0
+    b_count = 0
+    words_to_practice = [] 
+    mistakes = [] 
+    
+    for i, q in enumerate(st.session_state.quiz_data):
+        # Cevabı formdan arka plan değişkeni aracılığıyla çekiyoruz
+        ans = st.session_state.get(f"q_{i}")
+        original_word = next((w for w in word_pool if w["en"] == q["question"]), None)
+        
+        if ans is None:
+            b_count += 1
+            if original_word: words_to_practice.append(original_word)
+            mistakes.append({
+                "question": q["question"], 
+                "user_ans": "Boş Bırakıldı", 
+                "correct": q["correct"]
+            })
+        elif ans == q['correct']:
+            c_count += 1
+        else:
+            w_count += 1
+            if original_word: words_to_practice.append(original_word)
+            mistakes.append({
+                "question": q["question"], 
+                "user_ans": ans, 
+                "correct": q["correct"]
+            })
+            
+    st.session_state.correct_count = c_count
+    st.session_state.wrong_count = w_count
+    st.session_state.blank_count = b_count
+    st.session_state.score = c_count
+    st.session_state.words_to_repeat = words_to_practice
+    st.session_state.mistakes_details = mistakes
+    
+    st.session_state.submitted = True
+    st.session_state.quiz_active = False
 
 st.title("📚 İngilizce Kelime Sınavı")
 
@@ -193,9 +236,7 @@ if not st.session_state.quiz_active and not st.session_state.submitted:
     if st.session_state.words_to_repeat:
         st.info(f"💡 Bir önceki sınavda yanlış yaptığınız veya boş bıraktığınız **{len(st.session_state.words_to_repeat)} kelime**, yeni oluşturulacak sınava otomatik olarak dahil edilecektir.")
         
-    if st.button("Yeni Quiz Oluştur ve Başla", type="primary"):
-        start_new_quiz()
-        st.rerun()
+    st.button("Yeni Quiz Oluştur ve Başla", type="primary", on_click=start_new_quiz)
 
 # Sınav Ekranı
 if st.session_state.quiz_active and not st.session_state.submitted:
@@ -255,60 +296,16 @@ if st.session_state.quiz_active and not st.session_state.submitted:
     st.info("Sınav başladı! Süre sağ tarafta 45 dakikadan geriye doğru akmaya başladı.")
     
     with st.form("quiz_form"):
-        user_answers = []
         for i, q in enumerate(st.session_state.quiz_data):
             st.markdown(f"**{i + 1}. \"{q['question']}\" kelimesinin Türkçe karşılığı nedir?**")
-            ans = st.radio(f"Soru {i+1}", q['options'], key=f"q_{i}", index=None, label_visibility="collapsed")
-            user_answers.append(ans)
+            # key ataması hayati önem taşıyor, sistem cevapları buradan çekecek
+            st.radio(f"Soru {i+1}", q['options'], key=f"q_{i}", index=None, label_visibility="collapsed")
             st.write("---")
             
-        submit_button = st.form_submit_button("Sınavı Bitir ve Sonuçları Gör")
-        
-        if submit_button:
-            elapsed_time = time.time() - st.session_state.start_time
-            st.session_state.elapsed_minutes = int(elapsed_time // 60)
-            
-            c_count = 0
-            w_count = 0
-            b_count = 0
-            words_to_practice = [] 
-            mistakes = [] # Hata detaylarını kaydedeceğimiz liste
-            
-            for i, q in enumerate(st.session_state.quiz_data):
-                ans = user_answers[i]
-                original_word = next((w for w in word_pool if w["en"] == q["question"]), None)
-                
-                if ans is None:
-                    b_count += 1
-                    if original_word: words_to_practice.append(original_word)
-                    mistakes.append({
-                        "question": q["question"], 
-                        "user_ans": "Boş Bırakıldı", 
-                        "correct": q["correct"]
-                    })
-                elif ans == q['correct']:
-                    c_count += 1
-                else:
-                    w_count += 1
-                    if original_word: words_to_practice.append(original_word)
-                    mistakes.append({
-                        "question": q["question"], 
-                        "user_ans": ans, 
-                        "correct": q["correct"]
-                    })
-            
-            st.session_state.correct_count = c_count
-            st.session_state.wrong_count = w_count
-            st.session_state.blank_count = b_count
-            st.session_state.score = c_count
-            st.session_state.words_to_repeat = words_to_practice
-            st.session_state.mistakes_details = mistakes
-            
-            st.session_state.submitted = True
-            st.session_state.quiz_active = False
-            st.rerun()
+        # Callback fonksiyonunu doğrudan butona bağladık
+        st.form_submit_button("Sınavı Bitir ve Sonuçları Gör", on_click=finish_quiz)
 
-# Sonuç Ekranı
+# Sonuç ve Rapor Ekranı
 if st.session_state.submitted:
     st.success("Sınav Tamamlandı! İşte Sonuçlarınız:")
     
@@ -330,17 +327,17 @@ if st.session_state.submitted:
     else:
         st.balloons()
         
-    # Yanlış ve Boş Kelimelerin Detaylı Listesi
+    # DETAYLI HATA RAPORU
     if st.session_state.mistakes_details:
         st.write("---")
         st.subheader("📝 Hatalı ve Boş Bırakılan Soruların Analizi")
-        st.warning(f"Aşağıdaki **{len(st.session_state.mistakes_details)} kelime** bir sonraki sınavınızda öncelikli olarak tekrar karşınıza çıkacaktır.")
+        st.warning(f"Aşağıdaki kelimeleri daha iyi pekiştirmen için bir sonraki sınavına tekrar ekledim.")
         
-        # Hataları şık bir liste halinde göster
         for m in st.session_state.mistakes_details:
-            st.markdown(f"- **{m['question']}** ➔ Senin Cevabın: *{m['user_ans']}* | Doğru Cevap: **{m['correct']}**")
+            if m['user_ans'] == "Boş Bırakıldı":
+                st.info(f"⚪ **{m['question']}** ➔  Senin Cevabın: *Boş Bırakıldı* |  Doğru Cevap: **{m['correct']}**")
+            else:
+                st.error(f"❌ **{m['question']}** ➔  Senin Cevabın: *{m['user_ans']}* |  Doğru Cevap: **{m['correct']}**")
     
     st.write("---")
-    if st.button("Yeni Quiz Oluştur (Hataları Tekrar Et)", type="primary"):
-        start_new_quiz()
-        st.rerun()
+    st.button("Yeni Quiz Oluştur (Hataları Tekrar Et)", type="primary", on_click=start_new_quiz)
