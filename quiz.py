@@ -128,7 +128,7 @@ word_pool = [
     {"en": "Australia", "tr": "Avustralya"}
 ]
 
-# Session State Ayarları (Sayfa yenilendiğinde verilerin kaybolmaması için)
+# Session State Ayarları 
 if 'quiz_active' not in st.session_state:
     st.session_state.quiz_active = False
     st.session_state.quiz_data = []
@@ -194,7 +194,6 @@ def finish_quiz():
     mistakes = [] 
     
     for i, q in enumerate(st.session_state.quiz_data):
-        # Cevabı formdan arka plan değişkeni aracılığıyla çekiyoruz
         ans = st.session_state.get(f"q_{i}")
         original_word = next((w for w in word_pool if w["en"] == q["question"]), None)
         
@@ -270,14 +269,14 @@ if st.session_state.quiz_active and not st.session_state.submitted:
     </div>
     """, unsafe_allow_html=True)
 
+    # SAYAÇ VE SESLİ OKUMA BİLEŞENİ
     components.html(f"""
         <script>
+            // 1. SAYAÇ MOTORU
             var timeLeft = {time_left_seconds};
-            
             var timerInterval = setInterval(function() {{
                 var parentDoc = window.parent.document;
                 var elem = parentDoc.getElementById('countdown_timer_display');
-                
                 if (elem) {{
                     if (timeLeft <= 0) {{
                         clearInterval(timerInterval);
@@ -290,19 +289,42 @@ if st.session_state.quiz_active and not st.session_state.submitted:
                     }}
                 }}
             }}, 1000);
+
+            // 2. SESLİ OKUMA MOTORU
+            window.parent.speakWord = function(text) {{
+                // Eğer arka arkaya basılırsa eskisini durdurup yenisini okur
+                window.parent.speechSynthesis.cancel(); 
+                var msg = new SpeechSynthesisUtterance(text);
+                msg.lang = 'en-US'; // Amerikan İngilizcesi
+                msg.rate = 0.85; // Öğrenimi kolaylaştırmak için biraz yavaş
+                window.parent.speechSynthesis.speak(msg);
+            }}
         </script>
     """, height=0, width=0)
     
-    st.info("Sınav başladı! Süre sağ tarafta 45 dakikadan geriye doğru akmaya başladı.")
+    st.info("Sınav başladı! Kelimelerin yanındaki 🔊 simgesine tıklayarak İngilizce okunuşlarını dinleyebilirsiniz.")
     
     with st.form("quiz_form"):
         for i, q in enumerate(st.session_state.quiz_data):
-            st.markdown(f"**{i + 1}. \"{q['question']}\" kelimesinin Türkçe karşılığı nedir?**")
-            # key ataması hayati önem taşıyor, sistem cevapları buradan çekecek
+            
+            # Soru metni ve hoparlör butonu yan yana
+            question_html = f'''
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 5px;">
+                <span style="font-size: 1.1em; font-weight: 600;">{i + 1}. "{q['question']}" kelimesinin Türkçe karşılığı nedir?</span>
+                <button type="button" onclick="window.parent.speakWord('{q['question']}')" 
+                        style="background: transparent; border: none; font-size: 1.5rem; cursor: pointer; padding: 0; line-height: 1; transition: transform 0.1s;" 
+                        title="Dinle"
+                        onmousedown="this.style.transform='scale(0.9)'" 
+                        onmouseup="this.style.transform='scale(1)'">
+                    🔊
+                </button>
+            </div>
+            '''
+            
+            st.markdown(question_html, unsafe_allow_html=True)
             st.radio(f"Soru {i+1}", q['options'], key=f"q_{i}", index=None, label_visibility="collapsed")
             st.write("---")
             
-        # Callback fonksiyonunu doğrudan butona bağladık
         st.form_submit_button("Sınavı Bitir ve Sonuçları Gör", on_click=finish_quiz)
 
 # Sonuç ve Rapor Ekranı
@@ -331,7 +353,7 @@ if st.session_state.submitted:
     if st.session_state.mistakes_details:
         st.write("---")
         st.subheader("📝 Hatalı ve Boş Bırakılan Soruların Analizi")
-        st.warning(f"Aşağıdaki kelimeleri daha iyi pekiştirmen için bir sonraki sınavına tekrar ekledim.")
+        st.warning(f"Aşağıdaki kelimeleri daha iyi pekiştirmeniz için bir sonraki sınavınıza tekrar ekledik.")
         
         for m in st.session_state.mistakes_details:
             if m['user_ans'] == "Boş Bırakıldı":
