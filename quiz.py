@@ -2,6 +2,7 @@ import streamlit as st
 import streamlit.components.v1 as components
 import random
 import time
+import urllib.parse
 
 # Sayfa Ayarları
 st.set_page_config(page_title="İngilizce Kelime Sınavı", layout="centered")
@@ -269,7 +270,7 @@ if st.session_state.quiz_active and not st.session_state.submitted:
     </div>
     """, unsafe_allow_html=True)
 
-    # SADECE SAYAÇ (Ses motoru doğrudan butonların içine taşındı)
+    # SADECE SAYAÇ
     components.html(f"""
         <script>
             var timeLeft = {time_left_seconds};
@@ -291,21 +292,25 @@ if st.session_state.quiz_active and not st.session_state.submitted:
         </script>
     """, height=0, width=0)
     
-    st.info("Sınav başladı! Kelimelerin yanındaki 🔊 simgesine tıklayarak İngilizce okunuşlarını dinleyebilirsiniz. (Not: Cihazınızın sesinin açık olduğundan emin olun.)")
+    st.info("Sınav başladı! Kelimelerin yanındaki 🔊 simgesine tıklayarak İngilizce okunuşlarını dinleyebilirsiniz.")
     
     with st.form("quiz_form"):
         for i, q in enumerate(st.session_state.quiz_data):
             
-            # Kesme işaretleri (apostrof) gibi karakterlerin kodu bozmasını önlemek için kaçış dizisi
-            safe_word = q['question'].replace("'", "\\'")
+            # Kelimenin internet adresinde sorunsuz çalışması için URL formatına çeviriyoruz (Örn: "Pen Pal" -> "Pen%20Pal")
+            safe_word = urllib.parse.quote(q['question'])
             
-            # Sesli okuma kodunu doğrudan butonun onclick özelliğine gömüyoruz
-            js_code = f"window.speechSynthesis.cancel(); var msg = new SpeechSynthesisUtterance('{safe_word}'); msg.lang = 'en-US'; msg.rate = 0.85; window.speechSynthesis.speak(msg);"
+            # Google Translate altyapısından gerçek MP3 ses dosyasını çekiyoruz
+            audio_url = f"https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=en&q={safe_word}"
             
+            # Hem gizli bir <audio> etiketi hem de onu çalıştıracak buton oluşturuyoruz
             question_html = f'''
             <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 5px;">
                 <span style="font-size: 1.1em; font-weight: 600;">{i + 1}. "{q['question']}" kelimesinin Türkçe karşılığı nedir?</span>
-                <button type="button" onclick="{js_code}" 
+                
+                <audio id="audio_{i}" src="{audio_url}"></audio>
+                
+                <button type="button" onclick="document.getElementById('audio_{i}').play()" 
                         style="background: transparent; border: none; font-size: 1.5rem; cursor: pointer; padding: 0; line-height: 1; transition: transform 0.1s;" 
                         title="Sesli Dinle"
                         onmousedown="this.style.transform='scale(0.9)'" 
@@ -343,7 +348,6 @@ if st.session_state.submitted:
     else:
         st.balloons()
         
-    # DETAYLI HATA RAPORU
     if st.session_state.mistakes_details:
         st.write("---")
         st.subheader("📝 Hatalı ve Boş Bırakılan Soruların Analizi")
