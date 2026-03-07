@@ -269,10 +269,9 @@ if st.session_state.quiz_active and not st.session_state.submitted:
     </div>
     """, unsafe_allow_html=True)
 
-    # SAYAÇ VE SESLİ OKUMA BİLEŞENİ
+    # SADECE SAYAÇ (Ses motoru doğrudan butonların içine taşındı)
     components.html(f"""
         <script>
-            // 1. SAYAÇ MOTORU
             var timeLeft = {time_left_seconds};
             var timerInterval = setInterval(function() {{
                 var parentDoc = window.parent.document;
@@ -289,31 +288,26 @@ if st.session_state.quiz_active and not st.session_state.submitted:
                     }}
                 }}
             }}, 1000);
-
-            // 2. SESLİ OKUMA MOTORU
-            window.parent.speakWord = function(text) {{
-                // Eğer arka arkaya basılırsa eskisini durdurup yenisini okur
-                window.parent.speechSynthesis.cancel(); 
-                var msg = new SpeechSynthesisUtterance(text);
-                msg.lang = 'en-US'; // Amerikan İngilizcesi
-                msg.rate = 0.85; // Öğrenimi kolaylaştırmak için biraz yavaş
-                window.parent.speechSynthesis.speak(msg);
-            }}
         </script>
     """, height=0, width=0)
     
-    st.info("Sınav başladı! Kelimelerin yanındaki 🔊 simgesine tıklayarak İngilizce okunuşlarını dinleyebilirsiniz.")
+    st.info("Sınav başladı! Kelimelerin yanındaki 🔊 simgesine tıklayarak İngilizce okunuşlarını dinleyebilirsiniz. (Not: Cihazınızın sesinin açık olduğundan emin olun.)")
     
     with st.form("quiz_form"):
         for i, q in enumerate(st.session_state.quiz_data):
             
-            # Soru metni ve hoparlör butonu yan yana
+            # Kesme işaretleri (apostrof) gibi karakterlerin kodu bozmasını önlemek için kaçış dizisi
+            safe_word = q['question'].replace("'", "\\'")
+            
+            # Sesli okuma kodunu doğrudan butonun onclick özelliğine gömüyoruz
+            js_code = f"window.speechSynthesis.cancel(); var msg = new SpeechSynthesisUtterance('{safe_word}'); msg.lang = 'en-US'; msg.rate = 0.85; window.speechSynthesis.speak(msg);"
+            
             question_html = f'''
             <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 5px;">
                 <span style="font-size: 1.1em; font-weight: 600;">{i + 1}. "{q['question']}" kelimesinin Türkçe karşılığı nedir?</span>
-                <button type="button" onclick="window.parent.speakWord('{q['question']}')" 
+                <button type="button" onclick="{js_code}" 
                         style="background: transparent; border: none; font-size: 1.5rem; cursor: pointer; padding: 0; line-height: 1; transition: transform 0.1s;" 
-                        title="Dinle"
+                        title="Sesli Dinle"
                         onmousedown="this.style.transform='scale(0.9)'" 
                         onmouseup="this.style.transform='scale(1)'">
                     🔊
