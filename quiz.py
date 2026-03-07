@@ -246,37 +246,33 @@ if st.session_state.quiz_active and not st.session_state.submitted:
     if time_left_seconds < 0:
         time_left_seconds = 0
 
-    st.markdown("""
-    <div style="
-        position: fixed; 
-        top: 50%; 
-        right: 20px; 
-        transform: translateY(-50%);
-        background: #ffffff; 
-        padding: 15px; 
-        border-radius: 10px; 
-        box-shadow: 0px 4px 15px rgba(0,0,0,0.2); 
-        border: 2px solid #ff4b4b; 
-        color: #ff4b4b; 
-        font-weight: bold; 
-        font-size: 1.1rem; 
-        z-index: 99999;
-        text-align: center;
-        display: flex;
-        flex-direction: column;
-        gap: 5px;">
-        <span>⏳ Kalan Süre</span>
-        <span id="countdown_timer_display" style="font-size: 1.4rem;">Hesaplanıyor...</span>
-    </div>
-    """, unsafe_allow_html=True)
-
     # SADECE SAYAÇ
     components.html(f"""
+        <div style="
+            position: fixed; 
+            top: 50%; 
+            right: 20px; 
+            transform: translateY(-50%);
+            background: #ffffff; 
+            padding: 15px; 
+            border-radius: 10px; 
+            box-shadow: 0px 4px 15px rgba(0,0,0,0.2); 
+            border: 2px solid #ff4b4b; 
+            color: #ff4b4b; 
+            font-family: sans-serif;
+            font-weight: bold; 
+            font-size: 1.1rem; 
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;">
+            <span>⏳ Kalan Süre</span>
+            <span id="countdown_timer_display" style="font-size: 1.4rem;">Hesaplanıyor...</span>
+        </div>
         <script>
             var timeLeft = {time_left_seconds};
             var timerInterval = setInterval(function() {{
-                var parentDoc = window.parent.document;
-                var elem = parentDoc.getElementById('countdown_timer_display');
+                var elem = document.getElementById('countdown_timer_display');
                 if (elem) {{
                     if (timeLeft <= 0) {{
                         clearInterval(timerInterval);
@@ -290,35 +286,22 @@ if st.session_state.quiz_active and not st.session_state.submitted:
                 }}
             }}, 1000);
         </script>
-    """, height=0, width=0)
+    """, height=100)
     
     st.info("Sınav başladı! Kelimelerin yanındaki 🔊 simgesine tıklayarak İngilizce okunuşlarını dinleyebilirsiniz.")
     
     with st.form("quiz_form"):
         for i, q in enumerate(st.session_state.quiz_data):
             
-            # Kelimenin internet adresinde sorunsuz çalışması için URL formatına çeviriyoruz (Örn: "Pen Pal" -> "Pen%20Pal")
             safe_word = urllib.parse.quote(q['question'])
-            
-            # Google Translate altyapısından gerçek MP3 ses dosyasını çekiyoruz
             audio_url = f"https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=en&q={safe_word}"
             
-            # Hem gizli bir <audio> etiketi hem de onu çalıştıracak buton oluşturuyoruz
-            question_html = f'''
-            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 5px;">
-                <span style="font-size: 1.1em; font-weight: 600;">{i + 1}. "{q['question']}" kelimesinin Türkçe karşılığı nedir?</span>
-                
-                <audio id="audio_{i}" src="{audio_url}"></audio>
-                
-                <button type="button" onclick="document.getElementById('audio_{i}').play()" 
-                        style="background: transparent; border: none; font-size: 1.5rem; cursor: pointer; padding: 0; line-height: 1; transition: transform 0.1s;" 
-                        title="Sesli Dinle"
-                        onmousedown="this.style.transform='scale(0.9)'" 
-                        onmouseup="this.style.transform='scale(1)'">
-                    🔊
-                </button>
-            </div>
-            '''
+            # GİRİNTİSİZ KOD BLOĞU: Markdown'un bunu kod olarak algılamaması için HTML etiketleri tam en soldan başlıyor
+            question_html = f"""<div style="display: flex; align-items: center; gap: 10px; margin-bottom: 5px;">
+<span style="font-size: 1.1em; font-weight: 600;">{i + 1}. "{q['question']}" kelimesinin Türkçe karşılığı nedir?</span>
+<audio id="audio_{i}" src="{audio_url}"></audio>
+<button type="button" onclick="document.getElementById('audio_{i}').play()" style="background: transparent; border: none; font-size: 1.5rem; cursor: pointer; padding: 0; line-height: 1;" title="Sesli Dinle">🔊</button>
+</div>"""
             
             st.markdown(question_html, unsafe_allow_html=True)
             st.radio(f"Soru {i+1}", q['options'], key=f"q_{i}", index=None, label_visibility="collapsed")
